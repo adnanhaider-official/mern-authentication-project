@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-
+import authRoutes from "./routes/auth.routes.js";
 import errorHandler from "./middlewares/error.middleware";
 
 const app = express();
@@ -20,9 +20,7 @@ app.use(express.static("public"));
 app.use(cookieParser());
 
 // Route
-app.use("/test", (req, res) => {
-  res.send("Test Api is running.....");
-});
+app.use("/api/auth", authRoutes);
 
 // Error Handler
 app.use(errorHandler);
