@@ -91,3 +91,14 @@ export const getProfile = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, req.user, "Profile fetched successfully"));
 });
+
+export const updateProfile = asyncHandler(async (req, res) => {
+  const updatedUser = await User.findByIdAndUpdate(req.user._id, req.body, {
+    new: true,
+    runValidators: true,
+  });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, updatedUser, "Profile updated successfully"));
+});
