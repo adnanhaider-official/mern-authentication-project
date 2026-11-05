@@ -1,6 +1,7 @@
 import express from "express";
 import {
   getProfile,
+  googleLogin,
   loginUser,
   logoutUser,
   registerUser,
@@ -29,5 +30,6 @@ router.put(
   validate(updateProfileSchema),
   updateProfile,
 );
+router.post("/google", googleLogin);
 
 export default router;

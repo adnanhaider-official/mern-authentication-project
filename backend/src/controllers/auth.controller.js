@@ -8,6 +8,7 @@ import {
   uploadOnCloudinary,
   deleteFromCloudinary,
 } from "../utils/cloudinary.js";
+import googleClient from "../config/google.js";
 
 export const registerUser = asyncHandler(async (req, res) => {
   const { name, email, password } = req.body;
@@ -43,7 +44,7 @@ export const loginUser = asyncHandler(async (req, res) => {
   // Find user
   const user = await User.findOne({ email }).select("+password");
 
-  if (!user) {
+  if (!user || !user.password) {
     throw new ApiError(401, "Invalid email or password");
   }
 
@@ -131,4 +132,80 @@ export const updateProfile = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(new ApiResponse(200, user, "Profile updated successfully"));
+});
+
+export const googleLogin = asyncHandler(async (req, res) => {
+  const { idToken } = req.body;
+
+  if (!idToken) {
+    throw new ApiError(400, "Google ID token is required");
+  }
+
+  // 1. Verify Google ID Token
+  const ticket = await googleClient.verifyIdToken({
+    idToken,
+    audience: process.env.GOOGLE_CLIENT_ID,
+  });
+
+  // 2. Get Google user information
+  const payload = ticket.getPayload();
+
+  const { sub: googleId, name, email, picture, email_verified } = payload;
+
+  if (!email || !email_verified) {
+    throw new ApiError(401, "Google email is not verified");
+  }
+
+  // 3. Find existing user
+  let user = await User.findOne({
+    $or: [{ googleId }, { email: email.toLowerCase() }],
+  });
+
+  // 4. Create or link account
+  if (user) {
+    if (user.googleId && user.googleId !== googleId) {
+      throw new ApiError(409, "Google account mismatch");
+    }
+
+    if (!user.googleId) {
+      user.googleId = googleId;
+      user.authProvider = "google";
+    }
+
+    if (!user.avatar && picture) {
+      user.avatar = picture;
+    }
+
+    await user.save();
+  } else {
+    user = await User.create({
+      name,
+      email: email.toLowerCase(),
+      googleId,
+      authProvider: "google",
+      avatar: picture || "",
+    });
+  }
+
+  // 5. Generate JWT
+  const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+    expiresIn: "7d",
+  });
+
+  // 6. Cookie options
+  const options = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  };
+
+  // 7. Get user without password
+  const loggedInUser = await User.findById(user._id);
+
+  // 8. Send response
+  return res
+    .status(200)
+    .cookie("token", token, options)
+    .json(new ApiResponse(200, loggedInUser, "Google login successful"));
 });
