@@ -4,6 +4,10 @@ import ApiResponse from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import {
+  uploadOnCloudinary,
+  deleteFromCloudinary,
+} from "../utils/cloudinary.js";
 
 export const registerUser = asyncHandler(async (req, res) => {
   const { name, email, password } = req.body;
@@ -93,12 +97,38 @@ export const getProfile = asyncHandler(async (req, res) => {
 });
 
 export const updateProfile = asyncHandler(async (req, res) => {
-  const updatedUser = await User.findByIdAndUpdate(req.user._id, req.body, {
-    new: true,
-    runValidators: true,
-  });
+  const user = await User.findById(req.user._id);
+
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  const { name, bio } = req.body;
+
+  // Update name and bio
+  if (name !== undefined) user.name = name;
+  if (bio !== undefined) user.bio = bio;
+
+  // Upload new avatar
+  if (req.file) {
+    const uploadedImage = await uploadOnCloudinary(req.file.path);
+
+    if (!uploadedImage) {
+      throw new ApiError(500, "Avatar upload failed");
+    }
+
+    // Delete old avatar
+    if (user.avatarPublicId) {
+      await deleteFromCloudinary(user.avatarPublicId);
+    }
+
+    user.avatar = uploadedImage.secure_url;
+    user.avatarPublicId = uploadedImage.public_id;
+  }
+
+  await user.save();
 
   return res
     .status(200)
-    .json(new ApiResponse(200, updatedUser, "Profile updated successfully"));
+    .json(new ApiResponse(200, user, "Profile updated successfully"));
 });

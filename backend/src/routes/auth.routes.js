@@ -14,6 +14,7 @@ import {
   updateProfileSchema,
 } from "../validators/auth.validator.js";
 import authMiddleware from "../middlewares/auth.middleware.js";
+import { upload } from "../middlewares/upload.middleware.js";
 
 const router = express.Router();
 
@@ -24,6 +25,7 @@ router.get("/profile", authMiddleware, getProfile);
 router.put(
   "/profile",
   authMiddleware,
+  upload.single("avatar"),
   validate(updateProfileSchema),
   updateProfile,
 );
