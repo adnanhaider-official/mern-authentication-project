@@ -2,6 +2,8 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 
+import errorHandler from "./middlewares/error.middleware";
+
 const app = express();
 
 // Middlewares
@@ -21,5 +23,8 @@ app.use(cookieParser());
 app.use("/test", (req, res) => {
   res.send("Test Api is running.....");
 });
+
+// Error Handler
+app.use(errorHandler);
 
 export default app;
