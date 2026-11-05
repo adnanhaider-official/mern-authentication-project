@@ -72,3 +72,16 @@ export const loginUser = asyncHandler(async (req, res) => {
     .cookie("token", token, options)
     .json(new ApiResponse(200, loggedInUser, "Login successful"));
 });
+
+export const logoutUser = asyncHandler(async (req, res) => {
+  const options = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+  };
+
+  return res
+    .status(200)
+    .clearCookie("token", options)
+    .json(new ApiResponse(200, null, "Logout successful"));
+});
