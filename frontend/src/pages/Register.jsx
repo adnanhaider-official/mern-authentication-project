@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import api from "../lib/axios";
+import GoogleButton from "../components/GoogleButton";
 
 function Register() {
   const [name, setName] = useState("");
@@ -11,6 +13,7 @@ function Register() {
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
+  const { setUser } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -28,6 +31,24 @@ function Register() {
       navigate("/login");
     } catch (error) {
       setError(error.response?.data?.message || "Registration failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const response = await api.post("/auth/google", {
+        idToken: credentialResponse.credential,
+      });
+
+      setUser(response.data.data);
+      navigate("/");
+    } catch (error) {
+      setError(error.response?.data?.message || "Google signup failed");
     } finally {
       setLoading(false);
     }
@@ -100,6 +121,18 @@ function Register() {
             {loading ? "Creating Account..." : "Create Account"}
           </button>
         </form>
+
+        <div className="flex items-center gap-3 my-5">
+          <div className="flex-1 border-t border-gray-300"></div>
+          <span className="text-sm text-gray-400">OR</span>
+          <div className="flex-1 border-t border-gray-300"></div>
+        </div>
+
+        <GoogleButton
+          className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 disabled:opacity-50"
+          onSuccess={handleGoogleSuccess}
+          onError={() => setError("Google Signup Failed")}
+        />
 
         <p className="text-center text-sm text-gray-600 mt-7">
           Already have an account?{" "}
